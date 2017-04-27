@@ -13,9 +13,9 @@ from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping
 
 nb_epoch = 50
-side_correction = 0.5
 learning_rate = 0.0001
-curve_multiplier = 1.5
+side_correction = 0.5 # adjusted steering measurements for the side camera images
+curve_multiplier = 1.5 # for steep curve
 
 data_path = './data'
 lines = []
@@ -31,8 +31,8 @@ train_samples, validation_samples = train_test_split(lines, test_size=0.2)
 
 def generator(samples, batch_size=36, flip=False, side=False):
     """
-    data_augment: clockwise, flipping, second track
-    recovery: left, right. recover back.
+    flip: flipping images
+    side: using left and right images for recover back.
     """
 
     num_samples = len(samples)
@@ -58,21 +58,21 @@ def generator(samples, batch_size=36, flip=False, side=False):
                 name = data_path+'/IMG/'+batch_sample[0].split('/')[-1]
                 center_image = plt.imread(name)
                 #center_iamge = cv2.cvtColor(center_image, cv2.COLOR_BGR2RGB)
-                center_angle = float(batch_sample[3]) * curve_multiplier # for steep curve
+                center_angle = float(batch_sample[3]) * curve_multiplier 
                 images.append(center_image)
                 angles.append(center_angle)
 
                 if side:
                     # create adjusted steering measurements for the side camera images
-                    correction = side_correction # this is a parameter to tune
+                    correction = side_correction 
                     steering_left = center_angle + correction
                     steering_right = center_angle - correction
 
                     # read in images from center, left and right cameras
                     name = data_path+'/IMG/'+batch_sample[1].split('/')[-1]
-                    img_left = cv2.imread(name) # np.asarray(Image.open(name))
+                    img_left = cv2.imread(name) 
                     name = data_path+'/IMG/'+batch_sample[1].split('/')[-1]
-                    img_right = cv2.imread(name) # np.asarray(Image.open(name))
+                    img_right = cv2.imread(name)
 
                     # add images and angles to data set
                     images.extend([img_left, img_right])
@@ -99,14 +99,9 @@ def generator(samples, batch_size=36, flip=False, side=False):
             yield sklearn.utils.shuffle(X_train, y_train)
 
 
-#ch, row, col = 3, 80, 320 # Trimmed image format
 
 def net_model():
     model = Sequential()
-    # Preprocess incoming data, centered around zero with small standard deviation 
-    #model.add(Lambda(lambda x: x/127.5 - 1.,
-    #        input_shape=(ch, row, col),
-    #        output_shape=(ch, row, col)))
 
     model.add(Cropping2D(cropping=((50,20), (0,0)), input_shape=(160,320, 3)))
     model.add(Lambda(lambda x: x / 255.0 - 0.5))
